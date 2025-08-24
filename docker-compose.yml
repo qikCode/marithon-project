@@ -1,0 +1,148 @@
+version: '3.8'
+
+services:
+  # Flask Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile
+    container_name: sof-extractor-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://postgres:password@db:5432/sof_extractor
+      - REDIS_URL=redis://redis:6379/0
+      - UPLOAD_FOLDER=/app/uploads
+      - EXPORT_FOLDER=/app/exports
+    volumes:
+      - ./backend:/app
+      - uploads_data:/app/uploads
+      - exports_data:/app/exports
+    depends_on:
+      - db
+      - redis
+    networks:
+      - sof-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: sof-extractor-db
+    environment:
+      - POSTGRES_DB=sof_extractor
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - sof-network
+    restart: unless-stopped
+
+  # Redis for Caching and Background Tasks
+  redis:
+    image: redis:7-alpine
+    container_name: sof-extractor-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sof-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: sof-extractor-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./frontend:/usr/share/nginx/html
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+    networks:
+      - sof-network
+    restart: unless-stopped
+
+  # Celery Worker for Background Processing
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile
+    container_name: sof-extractor-celery
+    command: celery -A app.celery worker --loglevel=info
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=postgresql://postgres:password@db:5432/sof_extractor
+    volumes:
+      - ./backend:/app
+      - uploads_data:/app/uploads
+      - exports_data:/app/exports
+    depends_on:
+      - db
+      - redis
+    networks:
+      - sof-network
+    restart: unless-stopped
+
+  # Celery Beat for Scheduled Tasks
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile
+    container_name: sof-extractor-beat
+    command: celery -A app.celery beat --loglevel=info
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=postgresql://postgres:password@db:5432/sof_extractor
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+    networks:
+      - sof-network
+    restart: unless-stopped
+
+  # Flower for Celery Monitoring
+  flower:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile
+    container_name: sof-extractor-flower
+    command: celery -A app.celery flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+    networks:
+      - sof-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads_data:
+    driver: local
+  exports_data:
+    driver: local
+
+networks:
+  sof-network:
+    driver: bridge

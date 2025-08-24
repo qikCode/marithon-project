@@ -1,0 +1,228 @@
+{
+    "folders": [
+        {
+            "name": "🚢 SoF Event Extractor",
+            "path": "."
+        }
+    ],
+    "settings": {
+        "python.defaultInterpreterPath": "./venv/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.formatting.provider": "black",
+        "python.formatting.blackArgs": ["--line-length=88"],
+        "files.exclude": {
+            "**/__pycache__": true,
+            "**/*.pyc": true,
+            "**/node_modules": true,
+            "**/.git": false,
+            "**/venv": true,
+            "**/env": true,
+            "**/.pytest_cache": true,
+            "**/uploads": false,
+            "**/migrations": false
+        },
+        "files.associations": {
+            "*.yml": "yaml",
+            "*.yaml": "yaml",
+            "Dockerfile": "dockerfile",
+            "docker-compose.yml": "yaml"
+        },
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+        "terminal.integrated.cwd": ".",
+        "git.ignoreLimitWarning": true,
+        "explorer.fileNesting.enabled": true,
+        "explorer.fileNesting.patterns": {
+            "*.py": "${capture}.pyc",
+            "requirements.txt": "requirements-dev.txt, requirements-prod.txt",
+            "README.md": "LICENSE, CHANGELOG.md, CONTRIBUTING.md",
+            "app.py": "config.py, models.py"
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-python.python",
+            "ms-python.flake8",
+            "ms-python.black-formatter",
+            "ms-vscode.vscode-json",
+            "redhat.vscode-yaml",
+            "ms-vscode.vscode-docker",
+            "ms-python.pylint",
+            "ms-toolsai.jupyter",
+            "ms-vscode.live-server"
+        ]
+    },
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "🐍 Setup Virtual Environment",
+                "type": "shell",
+                "command": "python",
+                "args": ["-m", "venv", "venv"],
+                "group": "build",
+                "presentation": {
+                    "echo": true,
+                    "reveal": "always",
+                    "focus": false,
+                    "panel": "shared"
+                },
+                "options": {
+                    "cwd": "${workspaceFolder}"
+                }
+            },
+            {
+                "label": "📦 Install Dependencies",
+                "type": "shell",
+                "command": "${workspaceFolder}/venv/Scripts/pip",
+                "args": ["install", "-r", "requirements.txt"],
+                "group": "build",
+                "presentation": {
+                    "echo": true,
+                    "reveal": "always",
+                    "focus": false,
+                    "panel": "shared"
+                },
+                "options": {
+                    "cwd": "${workspaceFolder}"
+                },
+                "windows": {
+                    "command": "${workspaceFolder}/venv/Scripts/pip"
+                },
+                "linux": {
+                    "command": "${workspaceFolder}/venv/bin/pip"
+                },
+                "osx": {
+                    "command": "${workspaceFolder}/venv/bin/pip"
+                }
+            },
+            {
+                "label": "🚀 Start Flask Application",
+                "type": "shell",
+                "command": "python",
+                "args": ["app.py"],
+                "group": "test",
+                "presentation": {
+                    "echo": true,
+                    "reveal": "always",
+                    "focus": false,
+                    "panel": "shared"
+                },
+                "options": {
+                    "cwd": "${workspaceFolder}",
+                    "env": {
+                        "FLASK_ENV": "development",
+                        "FLASK_DEBUG": "1"
+                    }
+                }
+            },
+            {
+                "label": "🧪 Run Tests",
+                "type": "shell",
+                "command": "python",
+                "args": ["-m", "pytest", "-v"],
+                "group": "test",
+                "presentation": {
+                    "echo": true,
+                    "reveal": "always",
+                    "focus": false,
+                    "panel": "shared"
+                },
+                "options": {
+                    "cwd": "${workspaceFolder}"
+                }
+            },
+            {
+                "label": "🔍 Check Code Quality",
+                "type": "shell",
+                "command": "python",
+                "args": ["-m", "flake8", ".", "--max-line-length=88"],
+                "group": "test",
+                "presentation": {
+                    "echo": true,
+                    "reveal": "always",
+                    "focus": false,
+                    "panel": "shared"
+                },
+                "options": {
+                    "cwd": "${workspaceFolder}"
+                }
+            },
+            {
+                "label": "🗄️ Initialize Database",
+                "type": "shell",
+                "command": "python",
+                "args": ["-c", "from app import app, db; app.app_context().push(); db.create_all(); print('Database initialized!')"],
+                "group": "build",
+                "presentation": {
+                    "echo": true,
+                    "reveal": "always",
+                    "focus": false,
+                    "panel": "shared"
+                },
+                "options": {
+                    "cwd": "${workspaceFolder}"
+                }
+            },
+            {
+                "label": "🧹 Clean Cache",
+                "type": "shell",
+                "command": "find",
+                "args": [".", "-type", "d", "-name", "__pycache__", "-exec", "rm", "-rf", "{}", "+"],
+                "group": "build",
+                "presentation": {
+                    "echo": true,
+                    "reveal": "always",
+                    "focus": false,
+                    "panel": "shared"
+                },
+                "options": {
+                    "cwd": "${workspaceFolder}"
+                },
+                "windows": {
+                    "command": "powershell",
+                    "args": ["-Command", "Get-ChildItem -Path . -Recurse -Directory -Name '__pycache__' | Remove-Item -Recurse -Force"]
+                }
+            }
+        ]
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "🚀 Flask App",
+                "type": "python",
+                "request": "launch",
+                "program": "${workspaceFolder}/app.py",
+                "console": "integratedTerminal",
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "FLASK_ENV": "development",
+                    "FLASK_DEBUG": "1"
+                },
+                "args": []
+            },
+            {
+                "name": "🧪 Debug Tests",
+                "type": "python",
+                "request": "launch",
+                "module": "pytest",
+                "console": "integratedTerminal",
+                "cwd": "${workspaceFolder}",
+                "args": ["-v", "--tb=short"]
+            },
+            {
+                "name": "🔧 Debug Specific Module",
+                "type": "python",
+                "request": "launch",
+                "program": "${file}",
+                "console": "integratedTerminal",
+                "cwd": "${workspaceFolder}"
+            }
+        ]
+    }
+}
